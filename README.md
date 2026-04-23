@@ -6,7 +6,7 @@ This repository contains the **SciXplain** training, inference, evaluation, and 
 
 - `scixplain/`: core model code, prompts, and evaluation/training tools
 - `scripts/`: stage-wise training, evaluation, and reporting entry points
-- `pipelines/`: manifest-building and PDF download helpers
+- `pipelines/`: manifest-building helpers
 - `docs/`: setup and data-pipeline notes
 
 ## Quick Start
@@ -23,7 +23,7 @@ The repository supports local reconstruction of the training and evaluation work
 Reproducing the pipeline requires three local ingredients:
 
 1. **Source documents**
-   - Assemble a local corpus of scientific papers from sources that permit local download and processing.
+   - Assemble a local corpus of scientific papers that can be processed locally.
 2. **Local data processing**
    - Extract figures and surrounding text from PDFs.
    - Run OCR and any additional region or segmentation tooling locally.
@@ -56,7 +56,7 @@ The data-construction entry points are documented in:
 - [docs/DATA_PIPELINE.md](docs/DATA_PIPELINE.md)
 - [pipelines/README.md](pipelines/README.md)
 
-These files describe how to construct local manifests, download PDFs, and prepare a compatible local training corpus.
+These files describe how to construct local manifests and prepare a compatible local training corpus.
 
 For a quick sanity check of local paths before training or evaluation, use:
 

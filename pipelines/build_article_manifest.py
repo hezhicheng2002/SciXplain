@@ -42,15 +42,13 @@ def _clean(text: object) -> str:
 
 def _normalize(row: Dict, source: str) -> Dict:
     article_id = _clean(row.get("article_id") or row.get("paper_id") or row.get("id"))
-    arxiv_id = _clean(row.get("arxiv_id") or row.get("arxiv") or row.get("identifier"))
-    pdf_url = _clean(row.get("pdf_url"))
-    if not pdf_url and arxiv_id:
-        pdf_url = f"https://arxiv.org/pdf/{arxiv_id}.pdf"
+    external_id = _clean(
+        row.get("external_id") or row.get("arxiv_id") or row.get("arxiv") or row.get("identifier")
+    )
     return {
-        "article_id": article_id or arxiv_id,
+        "article_id": article_id or external_id,
         "source": _clean(row.get("source") or source),
-        "arxiv_id": arxiv_id,
-        "pdf_url": pdf_url,
+        "external_id": external_id,
         "title": _clean(row.get("title")),
     }
 
@@ -69,13 +67,13 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", required=True, help="input .json, .jsonl, or .csv file")
     parser.add_argument("--output", required=True, help="output manifest jsonl")
-    parser.add_argument("--source", default="arxiv", help="default source label")
+    parser.add_argument("--source", default="local", help="default source label")
     args = parser.parse_args()
 
     rows: List[Dict] = []
     for row in _read_rows(Path(args.input)):
         norm = _normalize(row, args.source)
-        if norm["article_id"] and (norm["arxiv_id"] or norm["pdf_url"]):
+        if norm["article_id"]:
             rows.append(norm)
 
     count = _write_jsonl(Path(args.output), rows)
@@ -84,4 +82,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

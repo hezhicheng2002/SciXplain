@@ -7,7 +7,7 @@ This repository releases the components of SciXplain that can be shared without 
 - training code for the structural teacher, visual student, and hierarchical decoder
 - inference and evaluation code for caption, description, explanation, and perturbation analysis
 - dataset conversion helpers
-- public manifest-building and PDF download utilities
+- public manifest-building utilities
 - reporting scripts used to aggregate metrics and diagnostic tables
 
 ## Not Redistributed
