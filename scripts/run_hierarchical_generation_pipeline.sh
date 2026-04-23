@@ -5,7 +5,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
 TS="${TS:-$(date +%m%d_%H%M%S)}"
-GPU="${GPU:-4}"
+CUDA_DEVICE="${CUDA_DEVICE:-${GPU:-4}}"
 LOG_DIR="${LOG_DIR:-$ROOT/logs/tinyllava}"
 mkdir -p "$LOG_DIR"
 
@@ -17,71 +17,86 @@ SCISTRUCT_TRAIN_JSON="${SCISTRUCT_TRAIN_JSON:-$ROOT/dataset/SciStruct/dataset_sp
 SCISTRUCT_VAL_JSON="${SCISTRUCT_VAL_JSON:-$ROOT/dataset/SciStruct/dataset_split_811/val.json}"
 SCISTRUCT_TEST_JSON="${SCISTRUCT_TEST_JSON:-$ROOT/dataset/SciStruct/dataset_split_811/test.json}"
 
-VISUAL_CKPT="${VISUAL_CKPT:-$ROOT/checkpoints/visual_student_scistruct_scicap_full_v2_ablate_no_dino_0209_155830/ckpt_last.pt}"
-STAGE4A_INIT_CKPT="${STAGE4A_INIT_CKPT:-$ROOT/checkpoints/tinyllava_phi_siglip_imgonly_scicap/ckpt_last.pt}"
-if [[ ! -f "$STAGE4A_INIT_CKPT" ]]; then
-  STAGE4A_INIT_CKPT="$ROOT/checkpoints/tinyllava_phi_siglip_stage4a_scicap_full_no_dino_0210_233417/ckpt_last.pt"
-fi
+VISUAL_CKPT="${VISUAL_CKPT:-$ROOT/checkpoints/visual_encoder/ckpt_last.pt}"
+CAPTION_INIT_CKPT="${CAPTION_INIT_CKPT:-$ROOT/checkpoints/caption_description_warm_start/ckpt_last.pt}"
 
-STAGE4A_STEPS="${STAGE4A_STEPS:-2200}"
-STAGE4B_STEPS="${STAGE4B_STEPS:-1400}"
-STAGE4B_EXPLAIN_RATIO="${STAGE4B_EXPLAIN_RATIO:-0.24}"
-STAGE4B_SCICAP_EXPLAIN_RATIO="${STAGE4B_SCICAP_EXPLAIN_RATIO:-0.15}"
-STAGE4B_EPOCH_SIZE="${STAGE4B_EPOCH_SIZE:-12000}"
+CAPTION_STEPS="${CAPTION_STEPS:-2200}"
+MULTITASK_STEPS="${MULTITASK_STEPS:-1400}"
+MULTITASK_EXPLAIN_RATIO="${MULTITASK_EXPLAIN_RATIO:-0.24}"
+MULTITASK_SCICAP_EXPLAIN_RATIO="${MULTITASK_SCICAP_EXPLAIN_RATIO:-0.15}"
+MULTITASK_EPOCH_SIZE="${MULTITASK_EPOCH_SIZE:-12000}"
 
-OUT_STAGE4A="${OUT_STAGE4A:-$ROOT/checkpoints/tinyllava_phi_siglip_stage4a_scicap_unified_${TS}}"
-OUT_STAGE4B="${OUT_STAGE4B:-$ROOT/checkpoints/tinyllava_phi_siglip_stage4b_unified_gpu4_${TS}}"
-SAMPLE_STAGE4A="${SAMPLE_STAGE4A:-$ROOT/outputs/stage4a_samples_unified_${TS}}"
-SAMPLE_STAGE4B="${SAMPLE_STAGE4B:-$ROOT/outputs/stage4b_samples_unified_${TS}}"
+OUT_CAPTION="${OUT_CAPTION:-$ROOT/checkpoints/caption_description_unified_${TS}}"
+OUT_HIER="${OUT_HIER:-$ROOT/checkpoints/hierarchical_generation_model_${TS}}"
+SAMPLE_CAPTION="${SAMPLE_CAPTION:-$ROOT/outputs/caption_description_samples_${TS}}"
+SAMPLE_HIER="${SAMPLE_HIER:-$ROOT/outputs/hierarchical_generation_samples_${TS}}"
 
-BENCH_TMP_OUT="${BENCH_TMP_OUT:-$ROOT/checkpoints/stage4_unified_evaltmp_${TS}}"
-BENCH_SAMPLE_DIR="${BENCH_SAMPLE_DIR:-$ROOT/outputs/stage4_unified_test_preds_${TS}}"
-BENCH_JSON="${BENCH_JSON:-$ROOT/outputs/stage4_unified_test_benchmark_${TS}.json}"
-BENCH_PAIR_JSONL="${BENCH_PAIR_JSONL:-$ROOT/outputs/stage4_unified_test_pairs_${TS}.jsonl}"
-BENCH_EXTRA_JSON="${BENCH_EXTRA_JSON:-$ROOT/outputs/stage4_unified_test_benchmark_${TS}_extra_metrics.json}"
-EXPLAIN_EVAL_JSON="${EXPLAIN_EVAL_JSON:-$ROOT/outputs/stage4_unified_explain_eval_${TS}.json}"
-EXPLAIN_SUMMARY_JSON="${EXPLAIN_SUMMARY_JSON:-$ROOT/outputs/stage4_unified_explain_summary_${TS}.json}"
+BENCH_TMP_OUT="${BENCH_TMP_OUT:-$ROOT/checkpoints/hierarchical_generation_eval_${TS}}"
+BENCH_SAMPLE_DIR="${BENCH_SAMPLE_DIR:-$ROOT/outputs/hierarchical_generation_preds_${TS}}"
+BENCH_JSON="${BENCH_JSON:-$ROOT/outputs/hierarchical_generation_benchmark_${TS}.json}"
+BENCH_PAIR_JSONL="${BENCH_PAIR_JSONL:-$ROOT/outputs/hierarchical_generation_pairs_${TS}.jsonl}"
+BENCH_EXTRA_JSON="${BENCH_EXTRA_JSON:-$ROOT/outputs/hierarchical_generation_benchmark_${TS}_extra_metrics.json}"
+EXPLAIN_EVAL_JSON="${EXPLAIN_EVAL_JSON:-$ROOT/outputs/explanation_diagnostics_${TS}.json}"
+EXPLAIN_SUMMARY_JSON="${EXPLAIN_SUMMARY_JSON:-$ROOT/outputs/explanation_diagnostics_summary_${TS}.json}"
 
-LOG_STAGE4A="${LOG_STAGE4A:-$LOG_DIR/train_stage4a_unified_${TS}.log}"
-LOG_STAGE4B="${LOG_STAGE4B:-$LOG_DIR/train_stage4b_unified_gpu4_${TS}.log}"
-LOG_BENCH="${LOG_BENCH:-$LOG_DIR/eval_stage4_unified_gpu4_${TS}.log}"
-LOG_EXPLAIN="${LOG_EXPLAIN:-$LOG_DIR/eval_stage4_unified_explain_gpu4_${TS}.log}"
+LOG_CAPTION="${LOG_CAPTION:-$LOG_DIR/train_caption_description_${TS}.log}"
+LOG_HIER="${LOG_HIER:-$LOG_DIR/train_hierarchical_generation_${TS}.log}"
+LOG_BENCH="${LOG_BENCH:-$LOG_DIR/eval_hierarchical_generation_${TS}.log}"
+LOG_EXPLAIN="${LOG_EXPLAIN:-$LOG_DIR/eval_explanation_diagnostics_${TS}.log}"
+
+# Backward-compatible trainer arguments for the multitask scheduler.
+multitask_compat_args=(
+  --dataset stage4_multitask
+  --stage4_explain_ratio "$MULTITASK_EXPLAIN_RATIO"
+  --stage4_epoch_size "$MULTITASK_EPOCH_SIZE"
+  --stage4_include_scistruct_caption
+  --stage4_scistruct_caption_json "$SCISTRUCT_TRAIN_JSON"
+  --stage4_scistruct_caption_short
+  --stage4_scistruct_caption_long
+  --stage4_scistruct_caption_min_len_short 20
+  --stage4_scistruct_caption_min_len_long 40
+  --stage4_include_scicap_explain
+  --stage4_scicap_explain_json "$SCICAP_TRAIN_JSON"
+  --stage4_scicap_explain_ratio "$MULTITASK_SCICAP_EXPLAIN_RATIO"
+  --stage4_scicap_explain_min_len 80
+  --stage4_scicap_explain_use_long_fallback
+)
 
 if [[ ! -f "$VISUAL_CKPT" ]]; then
   echo "[fatal] visual ckpt missing: $VISUAL_CKPT" >&2
   exit 2
 fi
-if [[ ! -f "$STAGE4A_INIT_CKPT" ]]; then
-  echo "[fatal] stage4A init ckpt missing: $STAGE4A_INIT_CKPT" >&2
+if [[ ! -f "$CAPTION_INIT_CKPT" ]]; then
+  echo "[fatal] caption/description init ckpt missing: $CAPTION_INIT_CKPT" >&2
   exit 2
 fi
 
 export PYTHONPATH="$ROOT:${PYTHONPATH:-}"
-export CUDA_VISIBLE_DEVICES="$GPU"
+export CUDA_VISIBLE_DEVICES="$CUDA_DEVICE"
 export HF_HUB_OFFLINE=1
 export TRANSFORMERS_OFFLINE=1
 export PYTORCH_ALLOC_CONF="${PYTORCH_ALLOC_CONF:-expandable_segments:True,max_split_size_mb:128}"
 
-echo "[start] ts=$TS gpu=$GPU"
+echo "[start] ts=$TS gpu=$CUDA_DEVICE"
 echo "[cfg] visual_ckpt=$VISUAL_CKPT"
-echo "[cfg] stage4A_init=$STAGE4A_INIT_CKPT"
+echo "[cfg] caption_init=$CAPTION_INIT_CKPT"
 
-# ------------------
-# Stage-4A: SciCap
-# ------------------
+# --------------------------------
+# Caption and description training
+# --------------------------------
 python "$ROOT/scixplain/tools/train_tinyllava_image_only.py" \
   --model_path "$ROOT/checkpoints/phi-sig" \
   --model_dtype bfloat16 \
   --visual_ckpt "$VISUAL_CKPT" \
-  --init_ckpt "$STAGE4A_INIT_CKPT" \
+  --init_ckpt "$CAPTION_INIT_CKPT" \
   --dataset scicap \
   --train_json "$SCICAP_TRAIN_JSON" \
   --val_json "$SCICAP_VAL_JSON" \
-  --out_dir "$OUT_STAGE4A" \
+  --out_dir "$OUT_CAPTION" \
   --batch_size 2 \
   --grad_accum 2 \
   --warmup_steps 0 \
-  --max_steps "$STAGE4A_STEPS" \
+  --max_steps "$CAPTION_STEPS" \
   --lr 1e-5 \
   --connector_lr 1e-5 \
   --lora_lr 1e-5 \
@@ -129,7 +144,7 @@ python "$ROOT/scixplain/tools/train_tinyllava_image_only.py" \
   --eval_length_penalty 1.0 \
   --eval_repetition_penalty 1.1 \
   --eval_no_repeat_ngram_size 3 \
-  --sample_out_dir "$SAMPLE_STAGE4A" \
+  --sample_out_dir "$SAMPLE_CAPTION" \
   --vision_pool 3 \
   --max_masks 8 \
   --region_token_scale 1.5 \
@@ -149,44 +164,31 @@ python "$ROOT/scixplain/tools/train_tinyllava_image_only.py" \
   --grad_checkpoint \
   --log_every 20 \
   --save_every 200 \
-  2>&1 | tee "$LOG_STAGE4A"
+  2>&1 | tee "$LOG_CAPTION"
 
-if [[ ! -f "$OUT_STAGE4A/ckpt_last.pt" ]]; then
-  echo "[fatal] missing stage4A ckpt: $OUT_STAGE4A/ckpt_last.pt" >&2
+if [[ ! -f "$OUT_CAPTION/ckpt_last.pt" ]]; then
+  echo "[fatal] missing caption/description ckpt: $OUT_CAPTION/ckpt_last.pt" >&2
   exit 2
 fi
 
-# -----------------------------------
-# Stage-4B: unified mixed multi-task
-# -----------------------------------
+# --------------------------------
+# Hierarchical generation training
+# --------------------------------
 python "$ROOT/scixplain/tools/train_tinyllava_image_only.py" \
   --model_path "$ROOT/checkpoints/phi-sig" \
   --model_dtype bfloat16 \
   --visual_ckpt "$VISUAL_CKPT" \
-  --init_ckpt "$OUT_STAGE4A/ckpt_last.pt" \
-  --dataset stage4_multitask \
+  --init_ckpt "$OUT_CAPTION/ckpt_last.pt" \
   --train_json "$SCICAP_TRAIN_JSON" \
   --val_json "$SCICAP_VAL_JSON" \
   --explain_train_json "$SCISTRUCT_TRAIN_JSON" \
   --explain_val_json "$SCISTRUCT_VAL_JSON" \
-  --stage4_explain_ratio "$STAGE4B_EXPLAIN_RATIO" \
-  --stage4_epoch_size "$STAGE4B_EPOCH_SIZE" \
-  --stage4_include_scistruct_caption \
-  --stage4_scistruct_caption_json "$SCISTRUCT_TRAIN_JSON" \
-  --stage4_scistruct_caption_short \
-  --stage4_scistruct_caption_long \
-  --stage4_scistruct_caption_min_len_short 20 \
-  --stage4_scistruct_caption_min_len_long 40 \
-  --stage4_include_scicap_explain \
-  --stage4_scicap_explain_json "$SCICAP_TRAIN_JSON" \
-  --stage4_scicap_explain_ratio "$STAGE4B_SCICAP_EXPLAIN_RATIO" \
-  --stage4_scicap_explain_min_len 80 \
-  --stage4_scicap_explain_use_long_fallback \
-  --out_dir "$OUT_STAGE4B" \
+  --out_dir "$OUT_HIER" \
+  "${multitask_compat_args[@]}" \
   --batch_size 2 \
   --grad_accum 2 \
   --warmup_steps 0 \
-  --max_steps "$STAGE4B_STEPS" \
+  --max_steps "$MULTITASK_STEPS" \
   --lr 1e-5 \
   --connector_lr 1e-5 \
   --lora_lr 1e-5 \
@@ -247,7 +249,7 @@ python "$ROOT/scixplain/tools/train_tinyllava_image_only.py" \
   --eval_length_penalty 1.0 \
   --eval_repetition_penalty 1.1 \
   --eval_no_repeat_ngram_size 3 \
-  --sample_out_dir "$SAMPLE_STAGE4B" \
+  --sample_out_dir "$SAMPLE_HIER" \
   --vision_pool 3 \
   --max_masks 8 \
   --region_token_scale 1.5 \
@@ -271,21 +273,21 @@ python "$ROOT/scixplain/tools/train_tinyllava_image_only.py" \
   --grad_checkpoint \
   --log_every 20 \
   --save_every 200 \
-  2>&1 | tee "$LOG_STAGE4B"
+  2>&1 | tee "$LOG_HIER"
 
-if [[ ! -f "$OUT_STAGE4B/ckpt_last.pt" ]]; then
-  echo "[fatal] missing stage4B ckpt: $OUT_STAGE4B/ckpt_last.pt" >&2
+if [[ ! -f "$OUT_HIER/ckpt_last.pt" ]]; then
+  echo "[fatal] missing hierarchical generation ckpt: $OUT_HIER/ckpt_last.pt" >&2
   exit 2
 fi
 
-# --------------------------
-# SciCap benchmark (full)
-# --------------------------
-GPU="$GPU" \
+# -----------------------------
+# Caption and description benchmark
+# -----------------------------
+CUDA_DEVICE="$CUDA_DEVICE" \
 VISUAL_CKPT="$VISUAL_CKPT" \
-CKPT_DIR="$OUT_STAGE4B" \
-INIT_CKPT="$OUT_STAGE4B/ckpt_last.pt" \
-EVAL_STEP="$STAGE4B_STEPS" \
+CKPT_DIR="$OUT_HIER" \
+INIT_CKPT="$OUT_HIER/ckpt_last.pt" \
+EVAL_STEP="$MULTITASK_STEPS" \
 SCICAP_TRAIN_JSON="$SCICAP_TRAIN_JSON" \
 SCICAP_TEST_JSON="$SCICAP_TEST_JSON" \
 OUT_DIR="$BENCH_TMP_OUT" \
@@ -293,15 +295,15 @@ SAMPLE_DIR="$BENCH_SAMPLE_DIR" \
 METRIC_JSON="$BENCH_JSON" \
 PAIR_JSONL="$BENCH_PAIR_JSONL" \
 METRIC_EXTRA_JSON="$BENCH_EXTRA_JSON" \
-bash "$ROOT/scripts/run_stage4a_test_benchmark_gpu4.sh" \
+bash "$ROOT/scripts/run_caption_description_benchmark.sh" \
   2>&1 | tee "$LOG_BENCH"
 
-# --------------------------
-# Explain diagnostics (full)
-# --------------------------
+# -----------------------
+# Explanation diagnostics
+# -----------------------
 python "$ROOT/scixplain/tools/eval_stage3_explain_samples.py" \
   --model_path "$ROOT/checkpoints/phi-sig" \
-  --ckpt "$OUT_STAGE4B/ckpt_last.pt" \
+  --ckpt "$OUT_HIER/ckpt_last.pt" \
   --visual_ckpt "$VISUAL_CKPT" \
   --data_json "$SCISTRUCT_TEST_JSON" \
   --num_samples 20 \
@@ -315,7 +317,7 @@ python "$ROOT/scixplain/tools/eval_stage3_explain_samples.py" \
   --output "$EXPLAIN_EVAL_JSON" \
   >"$LOG_EXPLAIN" 2>&1
 
-python - "$OUT_STAGE4B/val_log.jsonl" "$EXPLAIN_SUMMARY_JSON" <<'PY'
+python - "$OUT_HIER/val_log.jsonl" "$EXPLAIN_SUMMARY_JSON" <<'PY'
 import json
 import sys
 from pathlib import Path
@@ -351,9 +353,9 @@ out_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding=
 print(f"[saved] {out_path}")
 PY
 
-echo "[done] unified full multilevel run complete"
-echo "[out] stage4A_ckpt=$OUT_STAGE4A/ckpt_last.pt"
-echo "[out] stage4B_ckpt=$OUT_STAGE4B/ckpt_last.pt"
+echo "[done] hierarchical generation pipeline complete"
+echo "[out] caption_ckpt=$OUT_CAPTION/ckpt_last.pt"
+echo "[out] hierarchical_ckpt=$OUT_HIER/ckpt_last.pt"
 echo "[out] benchmark=$BENCH_JSON"
 echo "[out] benchmark_extra=$BENCH_EXTRA_JSON"
 echo "[out] explain_eval=$EXPLAIN_EVAL_JSON"

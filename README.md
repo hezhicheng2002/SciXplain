@@ -5,7 +5,7 @@ This repository contains the **SciXplain** training, inference, evaluation, and 
 ## Repository Layout
 
 - `scixplain/`: core model code, prompts, and evaluation/training tools
-- `scripts/`: stage-wise training, evaluation, and reporting entry points
+- `scripts/`: paper-facing training, evaluation, and reporting entry points
 - `pipelines/`: manifest-building helpers
 - `docs/`: setup and data-pipeline notes
 
@@ -32,17 +32,17 @@ Reproducing the pipeline requires three local ingredients:
    - Obtain compatible open backbones locally.
    - Train the released stages with the scripts provided in this repository.
 
-## Stage-Wise Entry Points
+## Main Entry Points
 
 - **Teacher training**
   - `scixplain/tools/train_ai2d_teacher.py`
-- **Visual-student training / ablation**
+- **Visual encoder training / ablation**
   - `scixplain/tools/train_visual_student.py`
-  - `scripts/run_visual_student_ablation_gpu4.sh`
-- **Hierarchical text-generation training**
-  - `scripts/train_tinyllava_stage4a_scicap.sh`
-  - `scripts/train_tinyllava_stage4b_scistruct_explain.sh`
-  - `scripts/run_stage4_full_multilevel_unified_gpu4.sh`
+  - `scripts/run_visual_encoder_ablation.sh`
+- **Hierarchical text generation**
+  - `scripts/train_caption_description_model.sh`
+  - `scripts/train_explanation_model.sh`
+  - `scripts/run_hierarchical_generation_pipeline.sh`
 - **Evaluation**
   - `scixplain/tools/eval_all_tasks_metrics.py`
   - `scixplain/tools/eval_desc_struct_consistency.py`

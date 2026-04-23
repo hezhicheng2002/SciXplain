@@ -6,21 +6,21 @@ SCICAP_ROOT="${SCICAP_ROOT:-${ROOT}/dataset/scicap_mlbcap_node_diagram_v2}"
 SCICAP_TRAIN_JSON="${SCICAP_TRAIN_JSON:-$SCICAP_ROOT/dataset_split/train.json}"
 SCICAP_VAL_JSON="${SCICAP_VAL_JSON:-$SCICAP_ROOT/dataset_split/val.json}"
 
-OUT_DIR="${OUT_DIR:-$ROOT/checkpoints/tinyllava_phi_siglip_stage4a_scicap}"
-INIT_CKPT_DEFAULT="${INIT_CKPT_DEFAULT:-$ROOT/checkpoints/tinyllava_phi_siglip_stage4_multitask/ckpt_last.pt}"
+OUT_DIR="${OUT_DIR:-$ROOT/checkpoints/caption_description_model}"
+INIT_CKPT_DEFAULT="${INIT_CKPT_DEFAULT:-$ROOT/checkpoints/hierarchical_generation_warm_start/ckpt_last.pt}"
 INIT_CKPT="${INIT_CKPT:-$INIT_CKPT_DEFAULT}"
-VISUAL_CKPT="${VISUAL_CKPT:-$ROOT/checkpoints/visual_student_scistruct_scicap_full_v2/ckpt_last.pt}"
+VISUAL_CKPT="${VISUAL_CKPT:-$ROOT/checkpoints/visual_encoder/ckpt_last.pt}"
 
 MAX_STEPS="${MAX_STEPS:-1200}"
 VAL_EVERY="${VAL_EVERY:-200}"
 SAMPLE_EVERY="${SAMPLE_EVERY:-200}"
-SAMPLE_OUT_DIR="${SAMPLE_OUT_DIR:-$ROOT/outputs/stage4a_samples_scicap}"
+SAMPLE_OUT_DIR="${SAMPLE_OUT_DIR:-$ROOT/outputs/caption_description_samples}"
 
 UNFREEZE_LLM_FROM="${UNFREEZE_LLM_FROM:-16}"
 UNFREEZE_LLM_TO="${UNFREEZE_LLM_TO:-32}"
 
 export PYTHONPATH="$ROOT:${PYTHONPATH:-}"
-export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-5}"
+export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-${CUDA_DEVICE:-5}}"
 export HF_HUB_OFFLINE=1
 export TRANSFORMERS_OFFLINE=1
 export PYTORCH_ALLOC_CONF=expandable_segments:True,max_split_size_mb:128
@@ -28,9 +28,9 @@ export PYTORCH_ALLOC_CONF=expandable_segments:True,max_split_size_mb:128
 if [[ -f "$OUT_DIR/ckpt_last.pt" ]]; then
   INIT_CKPT="$OUT_DIR/ckpt_last.pt"
 fi
-echo "[info][stage4a] init_ckpt=$INIT_CKPT"
-echo "[info][stage4a] out_dir=$OUT_DIR"
-echo "[info][stage4a] visual_ckpt=$VISUAL_CKPT"
+echo "[info][caption-desc] init_ckpt=$INIT_CKPT"
+echo "[info][caption-desc] out_dir=$OUT_DIR"
+echo "[info][caption-desc] visual_ckpt=$VISUAL_CKPT"
 
 python "$ROOT/scixplain/tools/train_tinyllava_image_only.py" \
   --model_path "$ROOT/checkpoints/phi-sig" \

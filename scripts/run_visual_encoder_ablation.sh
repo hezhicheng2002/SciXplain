@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
-GPU="${GPU:-4}"
+CUDA_DEVICE="${CUDA_DEVICE:-${GPU:-4}}"
 TS="${TS:-$(date +%m%d_%H%M%S)}"
 ENV_NAME="${ENV_NAME:-scixplain}"
 if [[ -n "${PYTHON_BIN:-}" ]]; then
@@ -62,20 +62,20 @@ run_variant() {
   local name="$1"
   shift
   local -a variant_args=("$@")
-  local out_dir="checkpoints/visual_student_scistruct_scicap_full_v2_ablate_${name}_${TS}"
-  local train_log="logs/visual_student/train_visual_student_full_v2_ablate_${name}_${TS}.log"
-  local eval_log="logs/visual_student/eval_visual_student_full_v2_ablate_${name}_${TS}.log"
-  local eval_jsonl="logs/visual_student/eval_visual_student_full_v2_ablate_${name}_${TS}.jsonl"
+  local out_dir="checkpoints/visual_encoder_scistruct_scicap_${name}_${TS}"
+  local train_log="logs/visual_student/train_visual_encoder_${name}_${TS}.log"
+  local eval_log="logs/visual_student/eval_visual_encoder_${name}_${TS}.log"
+  local eval_jsonl="logs/visual_student/eval_visual_encoder_${name}_${TS}.jsonl"
 
   echo "[start][${name}] train -> ${train_log}"
-  CUDA_VISIBLE_DEVICES="$GPU" "${PYTHON_CMD[@]}" scixplain/tools/train_visual_student.py \
+  CUDA_VISIBLE_DEVICES="$CUDA_DEVICE" "${PYTHON_CMD[@]}" scixplain/tools/train_visual_student.py \
     --out_dir "$out_dir" \
     "${common_args[@]}" \
     "${variant_args[@]}" \
     >"$train_log" 2>&1
 
   echo "[start][${name}] eval(test) -> ${eval_log}"
-  CUDA_VISIBLE_DEVICES="$GPU" "${PYTHON_CMD[@]}" scixplain/tools/train_visual_student.py \
+  CUDA_VISIBLE_DEVICES="$CUDA_DEVICE" "${PYTHON_CMD[@]}" scixplain/tools/train_visual_student.py \
     --out_dir "$out_dir" \
     --init_ckpt "$out_dir/ckpt_last.pt" \
     --val_log "$eval_jsonl" \
@@ -86,16 +86,21 @@ run_variant() {
   echo "[done][${name}] out_dir=${out_dir} eval_jsonl=${eval_jsonl}"
 }
 
-run_variant "no_dino" \
-  --disable_style_teacher \
+paper_config_args=(
+  --disable_style_teacher
   --lambda_style 0.0
+)
 
-# Keep the structural heads active and remove only the teacher-side feature distillation.
-# This avoids conflating "no structural teacher signal" with "no structural branch at all".
-run_variant "no_struct_distill" \
+run_variant "full" \
+  "${paper_config_args[@]}"
+
+# Keep the structural heads active and remove only teacher-side structural distillation.
+run_variant "w_o_structural_teacher" \
+  "${paper_config_args[@]}" \
   --disable_rex_distill_only
 
-run_variant "no_sam2" \
+run_variant "w_o_geometric_teacher" \
+  "${paper_config_args[@]}" \
   --disable_geom_teacher \
   --geom_mode none \
   --lambda_geom 0.0

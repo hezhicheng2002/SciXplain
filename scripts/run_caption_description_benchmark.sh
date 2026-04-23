@@ -3,30 +3,30 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 TS="${TS:-$(date +%m%d_%H%M%S)}"
-GPU="${GPU:-4}"
+CUDA_DEVICE="${CUDA_DEVICE:-${GPU:-4}}"
 TMP_ROOT="${TMP_ROOT:-$ROOT/tmp/run_tmp}"
 
 SCICAP_ROOT="${SCICAP_ROOT:-${ROOT}/dataset/scicap_mlbcap_node_diagram_v2}"
 SCICAP_TRAIN_JSON="${SCICAP_TRAIN_JSON:-$SCICAP_ROOT/dataset_split/train.json}"
 SCICAP_TEST_JSON="${SCICAP_TEST_JSON:-$SCICAP_ROOT/dataset_split/test.json}"
 
-CKPT_DIR="${CKPT_DIR:-$ROOT/checkpoints/tinyllava_phi_siglip_stage4a_scicap_metric_0208_202116}"
+CKPT_DIR="${CKPT_DIR:-$ROOT/checkpoints/caption_description_model}"
 INIT_CKPT="${INIT_CKPT:-$CKPT_DIR/ckpt_last.pt}"
 EVAL_STEP="${EVAL_STEP:-1200}"
-VISUAL_CKPT="${VISUAL_CKPT:-$ROOT/checkpoints/visual_student_scistruct_scicap_full_v2/ckpt_last.pt}"
+VISUAL_CKPT="${VISUAL_CKPT:-$ROOT/checkpoints/visual_encoder/ckpt_last.pt}"
 
-OUT_DIR="${OUT_DIR:-$ROOT/checkpoints/tinyllava_phi_siglip_stage4a_scicap_metric_0208_202116_evaltest_${TS}}"
-SAMPLE_DIR="${SAMPLE_DIR:-$ROOT/outputs/stage4a_test_preds_${TS}}"
-METRIC_JSON="${METRIC_JSON:-$ROOT/outputs/stage4a_test_benchmark_${TS}.json}"
-PAIR_JSONL="${PAIR_JSONL:-$ROOT/outputs/stage4a_test_benchmark_pairs_${TS}.jsonl}"
-METRIC_EXTRA_JSON="${METRIC_EXTRA_JSON:-$ROOT/outputs/stage4a_test_benchmark_${TS}_extra_metrics.json}"
+OUT_DIR="${OUT_DIR:-$ROOT/checkpoints/caption_description_eval_${TS}}"
+SAMPLE_DIR="${SAMPLE_DIR:-$ROOT/outputs/caption_description_preds_${TS}}"
+METRIC_JSON="${METRIC_JSON:-$ROOT/outputs/caption_description_benchmark_${TS}.json}"
+PAIR_JSONL="${PAIR_JSONL:-$ROOT/outputs/caption_description_benchmark_pairs_${TS}.jsonl}"
+METRIC_EXTRA_JSON="${METRIC_EXTRA_JSON:-$ROOT/outputs/caption_description_benchmark_${TS}_extra_metrics.json}"
 CAPTION_BLOCK_FORMULA_IN_DECODE="${CAPTION_BLOCK_FORMULA_IN_DECODE:-1}"
 DESC_BLOCK_PROMPT_LEAK_IN_DECODE="${DESC_BLOCK_PROMPT_LEAK_IN_DECODE:-1}"
 
 mkdir -p "$TMP_ROOT" "$OUT_DIR" "$SAMPLE_DIR" "$ROOT/logs/tinyllava"
 
 export PYTHONPATH="$ROOT:${PYTHONPATH:-}"
-export CUDA_VISIBLE_DEVICES="$GPU"
+export CUDA_VISIBLE_DEVICES="$CUDA_DEVICE"
 export HF_HUB_OFFLINE=1
 export TRANSFORMERS_OFFLINE=1
 export PYTORCH_ALLOC_CONF=expandable_segments:True,max_split_size_mb:128
@@ -379,9 +379,9 @@ if [[ "${AUTO_RECLAIM_GPU:-0}" == "1" ]]; then
     nohup bash -lc "$GPU_RECLAIM_CMD" >/dev/null 2>&1 &
     HPID=$!
     mkdir -p "$ROOT/logs/tinyllava/pids"
-    echo "$HPID" > "$ROOT/logs/tinyllava/pids/gpu_reclaim_gpu${GPU}.pid"
-    echo "$(date '+%F %T') restarted_gpu_reclaim pid=$HPID gpu=$GPU after_stage4a_test=$TS" >> "$ROOT/logs/tinyllava/gpu_reclaim.log"
-    echo "[done] gpu_reclaim_pid=$HPID gpu=$GPU"
+    echo "$HPID" > "$ROOT/logs/tinyllava/pids/gpu_reclaim_gpu${CUDA_DEVICE}.pid"
+    echo "$(date '+%F %T') restarted_gpu_reclaim pid=$HPID gpu=$CUDA_DEVICE after_caption_benchmark=$TS" >> "$ROOT/logs/tinyllava/gpu_reclaim.log"
+    echo "[done] gpu_reclaim_pid=$HPID gpu=$CUDA_DEVICE"
   else
     echo "[warn] AUTO_RECLAIM_GPU=1 but GPU_RECLAIM_CMD is unset; skip reclaim"
   fi

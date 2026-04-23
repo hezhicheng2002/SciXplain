@@ -5,17 +5,17 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 SCISTRUCT_TRAIN_JSON="${SCISTRUCT_TRAIN_JSON:-$ROOT/dataset/SciStruct/dataset_split_811/train.json}"
 SCISTRUCT_VAL_JSON="${SCISTRUCT_VAL_JSON:-$ROOT/dataset/SciStruct/dataset_split_811/val.json}"
 
-OUT_DIR="${OUT_DIR:-$ROOT/checkpoints/tinyllava_phi_siglip_stage4b_scistruct_explain}"
-INIT_CKPT_DEFAULT="${INIT_CKPT_DEFAULT:-$ROOT/checkpoints/tinyllava_phi_siglip_stage4a_scicap/ckpt_last.pt}"
+OUT_DIR="${OUT_DIR:-$ROOT/checkpoints/explanation_model}"
+INIT_CKPT_DEFAULT="${INIT_CKPT_DEFAULT:-$ROOT/checkpoints/caption_description_model/ckpt_last.pt}"
 INIT_CKPT="${INIT_CKPT:-$INIT_CKPT_DEFAULT}"
-VISUAL_CKPT="${VISUAL_CKPT:-$ROOT/checkpoints/visual_student_scistruct_scicap_full_v2_ablate_no_dino_0209_155830/ckpt_last.pt}"
+VISUAL_CKPT="${VISUAL_CKPT:-$ROOT/checkpoints/visual_encoder/ckpt_last.pt}"
 
 MAX_STEPS="${MAX_STEPS:-1200}"
 VAL_EVERY="${VAL_EVERY:-200}"
 VAL_BATCH_SIZE="${VAL_BATCH_SIZE:-2}"
 VAL_NUM_BATCHES="${VAL_NUM_BATCHES:-20}"
 SAMPLE_EVERY="${SAMPLE_EVERY:-200}"
-SAMPLE_OUT_DIR="${SAMPLE_OUT_DIR:-$ROOT/outputs/stage4b_samples_explain}"
+SAMPLE_OUT_DIR="${SAMPLE_OUT_DIR:-$ROOT/outputs/explanation_samples}"
 BATCH_SIZE="${BATCH_SIZE:-2}"
 GRAD_ACCUM="${GRAD_ACCUM:-2}"
 MAX_LENGTH="${MAX_LENGTH:-768}"
@@ -31,9 +31,9 @@ ENABLE_EXPLAIN_REGION_ADAPTER="${ENABLE_EXPLAIN_REGION_ADAPTER:-1}"
 CONTEXT_MODE="${CONTEXT_MODE:-paragraph_ocr_desc}"
 EXPLAIN_ALLOW_CONTEXT_KV="${EXPLAIN_ALLOW_CONTEXT_KV:-1}"
 FORBID_PARAGRAPH_KV="${FORBID_PARAGRAPH_KV:-1}"
-USE_AUTO_DESC="${USE_AUTO_DESC:-1}"
+USE_DESCRIPTION_CONTEXT="${USE_DESCRIPTION_CONTEXT:-1}"
 USE_OCR="${USE_OCR:-1}"
-EXPLAIN_CTX_MIN_ADESC_TOKENS="${EXPLAIN_CTX_MIN_ADESC_TOKENS:-64}"
+EXPLAIN_CTX_MIN_DESC_TOKENS="${EXPLAIN_CTX_MIN_DESC_TOKENS:-64}"
 EXPLAIN_CTX_MAX_OCR_TOKENS="${EXPLAIN_CTX_MAX_OCR_TOKENS:-128}"
 MAX_CTX_TOKENS_EXPLAIN="${MAX_CTX_TOKENS_EXPLAIN:-192}"
 CONTEXT_DROPOUT="${CONTEXT_DROPOUT:-0.65}"
@@ -49,7 +49,7 @@ UNFREEZE_LLM_FROM="${UNFREEZE_LLM_FROM:-16}"
 UNFREEZE_LLM_TO="${UNFREEZE_LLM_TO:-32}"
 
 export PYTHONPATH="$ROOT:${PYTHONPATH:-}"
-export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-5}"
+export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-${CUDA_DEVICE:-5}}"
 export HF_HUB_OFFLINE=1
 export TRANSFORMERS_OFFLINE=1
 export PYTORCH_ALLOC_CONF=expandable_segments:True,max_split_size_mb:128
@@ -57,9 +57,9 @@ export PYTORCH_ALLOC_CONF=expandable_segments:True,max_split_size_mb:128
 if [[ -f "$OUT_DIR/ckpt_last.pt" ]]; then
   INIT_CKPT="$OUT_DIR/ckpt_last.pt"
 fi
-echo "[info][stage4b] init_ckpt=$INIT_CKPT"
-echo "[info][stage4b] out_dir=$OUT_DIR"
-echo "[info][stage4b] visual_ckpt=$VISUAL_CKPT"
+echo "[info][explain] init_ckpt=$INIT_CKPT"
+echo "[info][explain] out_dir=$OUT_DIR"
+echo "[info][explain] visual_ckpt=$VISUAL_CKPT"
 
 EXTRA_ARGS=()
 if [[ "$LOG_ATTN" == "1" ]]; then
@@ -77,7 +77,7 @@ fi
 if [[ "$FORBID_PARAGRAPH_KV" == "1" ]]; then
   EXTRA_ARGS+=(--explain_hard_paragraph_kv_gate --explain_hard_paragraph_kv_bias "$EXPLAIN_HARD_PARAGRAPH_KV_BIAS")
 fi
-if [[ "$USE_AUTO_DESC" != "1" ]]; then
+if [[ "$USE_DESCRIPTION_CONTEXT" != "1" ]]; then
   EXTRA_ARGS+=(--disable_explain_adesc)
 fi
 if [[ "$USE_OCR" != "1" ]]; then
@@ -128,7 +128,7 @@ python "$ROOT/scixplain/tools/train_tinyllava_image_only.py" \
   --enable_task_style_tokens \
   --max_ctx_tokens 128 \
   --max_ctx_tokens_explain "$MAX_CTX_TOKENS_EXPLAIN" \
-  --explain_ctx_min_adesc_tokens "$EXPLAIN_CTX_MIN_ADESC_TOKENS" \
+  --explain_ctx_min_adesc_tokens "$EXPLAIN_CTX_MIN_DESC_TOKENS" \
   --explain_ctx_max_ocr_tokens "$EXPLAIN_CTX_MAX_OCR_TOKENS" \
   --consistency_mode anchor \
   --consistency_weight 0.2 \
