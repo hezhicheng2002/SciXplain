@@ -90,13 +90,10 @@ run_variant "no_dino" \
   --disable_style_teacher \
   --lambda_style 0.0
 
-run_variant "no_rex" \
-  --disable_rex_teacher \
-  --lambda_struct 0.0 \
-  --lambda_graph 0.0 \
-  --lambda_node 0.0 \
-  --lambda_role 0.0 \
-  --lambda_edge 0.0
+# Keep the structural heads active and remove only the teacher-side feature distillation.
+# This avoids conflating "no structural teacher signal" with "no structural branch at all".
+run_variant "no_struct_distill" \
+  --disable_rex_distill_only
 
 run_variant "no_sam2" \
   --disable_geom_teacher \

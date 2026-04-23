@@ -1,19 +1,33 @@
 # Code Availability
 
-This public repository releases the parts of SciXplain that can be shared safely:
+This repository releases the components of SciXplain that can be shared without redistributing copyrighted or license-restricted assets.
 
-- training scripts
-- inference scripts
-- evaluation scripts
+## Publicly Released
+
+- training code for the structural teacher, visual student, and hierarchical decoder
+- inference and evaluation code for caption, description, explanation, and perturbation analysis
 - dataset conversion helpers
-- data crawling / manifest-building pipeline
+- public manifest-building and PDF download utilities
+- reporting scripts used to aggregate metrics and diagnostic tables
 
-The following assets are **not** included in the public release:
+## Not Redistributed
 
-- raw SciStruct images or redistributed figure crops
-- processed OCR payloads derived from copyrighted figures
-- private checkpoints or trained weights
-- third-party baseline bundles and their local wrappers
+The following assets are intentionally excluded from the public release:
 
-If you want to reproduce the full pipeline locally, prepare the data and checkpoints yourself, then point the scripts to your local paths with CLI flags or environment variables.
+- project-specific curated benchmark payloads
+- figure crops, OCR payloads, or derived annotations extracted from copyrighted papers
+- redistributed copies of third-party benchmark assets
+- trained project checkpoints and full released weights
+- third-party baseline bundles whose redistribution is restricted by upstream licenses or packaging constraints
 
+## Practical Reproduction Boundary
+
+The code release supports local reconstruction of the training and evaluation pipeline. To reproduce the full workflow, a user must:
+
+1. obtain legally accessible source documents locally
+2. run local figure extraction, OCR, and any additional annotation or segmentation tooling
+3. prepare split files in the expected repository format
+4. acquire compatible open backbones locally
+5. train and evaluate the released stages with local paths
+
+This repository therefore provides a reproducible **implementation path**, while the benchmark payload and trained artifacts remain outside the release boundary.

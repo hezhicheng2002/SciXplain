@@ -1,27 +1,42 @@
 # Data Pipeline
 
-Because the source figures and PDFs have copyright restrictions, this repository does not publish the benchmark payload itself. Instead, it provides the public part of the collection pipeline.
+This repository does not publish the benchmark payload itself. Instead, it releases the public part of the data-construction workflow needed to rebuild a compatible local corpus.
 
-## Public Steps
+## Design Principles
 
-1. Build an article manifest.
-2. Download PDFs from public sources such as arXiv.
-3. Run your local figure extraction / OCR toolchain.
-4. Build task-specific split files for SciXplain and SciStruct training.
+- do not redistribute copyrighted PDFs, figure crops, or OCR payloads
+- keep the downloadable part of the pipeline separate from project-specific curation artifacts
+- allow local reconstruction from legally accessible sources
+
+## Public Reconstruction Workflow
+
+1. **Build an article manifest**
+   - Create a JSONL manifest containing the document identifiers and public download information needed for local collection.
+2. **Download PDFs from public sources**
+   - Use the provided helpers for arXiv-compatible sources, or adapt the manifest to other legally accessible providers.
+3. **Run local document processing**
+   - Extract figures and surrounding text from PDFs.
+   - Run OCR locally.
+   - Run any region proposal, segmentation, or diagram-specific preprocessing locally.
+4. **Filter and curate the local corpus**
+   - Apply local filtering rules appropriate for the target diagram subset.
+   - Perform local quality control and manual verification where required.
+5. **Build split files and benchmark JSON/JSONL assets**
+   - Export training, validation, and test files in the formats expected by the training and evaluation code in this repository.
 
 ## Included Scripts
 
 - `pipelines/build_article_manifest.py`
-  - normalizes article metadata into a JSONL manifest
-  - keeps fields such as `article_id`, `source`, `arxiv_id`, `pdf_url`, and `title`
+  - normalizes input article metadata into a JSONL manifest
+  - retains fields such as `article_id`, `source`, `arxiv_id`, `pdf_url`, and `title`
 
 - `pipelines/download_arxiv_pdfs.py`
-  - downloads PDFs from an input manifest
-  - stores them under a local output directory without redistributing them
+  - downloads PDFs from arXiv-compatible entries in the manifest
+  - stores them locally without redistributing them
 
 ## Notes
 
-- The public release does not package extracted figures.
+- The repository does not package extracted figures.
 - OCR results are not redistributed.
-- You should keep article IDs and download manifests separate from the released benchmark payload when a venue or copyright policy requires that.
-
+- The release does not expose the project-specific article list, exact curation range, or benchmark payload.
+- Users should keep article manifests and local benchmark artifacts separate whenever venue policy, copyright policy, or source-site terms require that separation.
