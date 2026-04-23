@@ -6,24 +6,31 @@ This repository contains the **SciXplain** training, inference, evaluation, and 
 
 - `scixplain/`: core model code, prompts, and evaluation/training tools
 - `scripts/`: stage-wise training, evaluation, and reporting entry points
-- `pipelines/`: public manifest-building and PDF download helpers
+- `pipelines/`: manifest-building and PDF download helpers
 - `docs/`: setup and data-pipeline notes
+
+## Quick Start
+
+1. Create an environment with the dependencies used by your local training setup.
+2. Put the required checkpoints under your local paths or override them with CLI flags.
+3. Export `PYTHONPATH` to the repository root.
+4. Run the desired entry point under `scripts/`.
 
 ## Reproduction Overview
 
-Reproducing the full pipeline requires three local ingredients:
+The repository supports local reconstruction of the training and evaluation workflow from locally prepared data and model assets.
 
-1. **Legally accessible source documents**
+Reproducing the pipeline requires three local ingredients:
+
+1. **Source documents**
    - Assemble a local corpus of scientific papers from sources that permit local download and processing.
 2. **Local data processing**
    - Extract figures and surrounding text from PDFs.
-   - Run OCR and any additional region/segmentation tooling locally.
-   - Build split files in the JSON/JSONL layouts expected by the training scripts.
+   - Run OCR and any additional region or segmentation tooling locally.
+   - Build split files in the JSON or JSONL layouts expected by the training scripts.
 3. **Local model preparation**
    - Obtain compatible open backbones locally.
    - Train the released stages with the scripts provided in this repository.
-
-The repository supports local reconstruction of the training and evaluation workflow from locally prepared data and model assets.
 
 ## Stage-Wise Entry Points
 
@@ -42,14 +49,14 @@ The repository supports local reconstruction of the training and evaluation work
   - `scripts/run_explanation_perturb_live.sh`
   - `scripts/generate_multitable_report.py`
 
-## Local Data Reconstruction
+## Data Pipeline
 
-The public curation entry points are documented in:
+The data-construction entry points are documented in:
 
 - [docs/DATA_PIPELINE.md](docs/DATA_PIPELINE.md)
 - [pipelines/README.md](pipelines/README.md)
 
-These files describe how to construct local manifests, download public PDFs, and prepare a compatible local training corpus.
+These files describe how to construct local manifests, download PDFs, and prepare a compatible local training corpus.
 
 For a quick sanity check of local paths before training or evaluation, use:
 
